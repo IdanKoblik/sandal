@@ -1,22 +1,22 @@
 use std::process::Command as ProcessCommand;
 
-pub enum Command {
-    Internal(InternalCommand),
-    External(ExternalCommand),
+pub enum Command<'a> {
+    Internal(InternalCommand<'a>),
+    External(ExternalCommand<'a>),
 }
 
-pub enum InternalCommand {
-    Cd(String),
+pub enum InternalCommand<'a> {
+    Cd(&'a str),
     Exit,
 }
 
-pub struct ExternalCommand {
-    program: String,
-    args: Vec<String>,
+pub struct ExternalCommand<'a> {
+    program: &'a str,
+    args: std::str::SplitWhitespace<'a>,
 }
 
-impl Command {
-    pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
+impl Command<'_> {
+    pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             Command::Internal(cmd) => cmd.execute(),
             Command::External(cmd) => cmd.execute(),
@@ -24,8 +24,8 @@ impl Command {
     }
 }
 
-impl InternalCommand {
-    fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
+impl InternalCommand<'_> {
+    fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             InternalCommand::Cd(path) => {
                 if path.is_empty() {
@@ -44,9 +44,9 @@ impl InternalCommand {
     }
 }
 
-impl ExternalCommand {
-    fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
-        match ProcessCommand::new(&self.program).args(&self.args).spawn() {
+impl ExternalCommand<'_> {
+    fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
+        match ProcessCommand::new(self.program).args(self.args).spawn() {
             Ok(mut child) => {
                 child.wait()?;
             }
@@ -60,20 +60,18 @@ impl ExternalCommand {
     }
 }
 
-pub fn parse_command(input: &str) -> Command {
+pub fn parse_command<'a>(input: &'a str) -> Command<'a> {
     let mut parts = input.split_whitespace();
-
     let name = parts.next().unwrap_or("");
-    let args: Vec<String> = parts.map(String::from).collect();
 
     match name {
         "cd" => Command::Internal(InternalCommand::Cd(
-            args.first().cloned().unwrap_or_default(),
+            parts.next().unwrap_or_default(),
         )),
         "exit" => Command::Internal(InternalCommand::Exit),
         _ => Command::External(ExternalCommand {
-            program: name.to_string(),
-            args,
+            program: name,
+            args: parts,
         }),
     }
 }
