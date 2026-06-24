@@ -15,17 +15,15 @@ pub struct ExternalCommand {
     args: Vec<String>
 }
 
-#[allow(clippy::needless_return)]
 impl Command {
     pub fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
-        return match self {
+        match self {
             Command::Internal(cmd) => cmd.execute(),
             Command::External(cmd) => cmd.execute(),
         }
     }
 }
 
-#[allow(clippy::needless_return)]
 impl InternalCommand {
     fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
         match self {
@@ -42,11 +40,10 @@ impl InternalCommand {
             }
         };
         
-        return Ok(());
+        Ok(())
     }
 }
 
-#[allow(clippy::needless_return)]
 impl ExternalCommand {
     fn execute(&self) -> Result<(), Box<dyn std::error::Error>> {
         match ProcessCommand::new(&self.program).args(&self.args).spawn() {
@@ -59,21 +56,20 @@ impl ExternalCommand {
             Err(err) => return Err(err.into()),
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
 
-#[allow(clippy::needless_return)]
 pub fn parse_command(input: &str) -> Command {
     let mut parts = input.split_whitespace();
 
     let name = parts.next().unwrap_or("");
     let args: Vec<String> = parts.map(String::from).collect();
 
-    return match name {
+    match name {
         "cd" => {
-            return Command::Internal(InternalCommand::Cd(args.first().cloned().unwrap_or_default()));
+            Command::Internal(InternalCommand::Cd(args.first().cloned().unwrap_or_default()))
         }
         "exit" => Command::Internal(InternalCommand::Exit),
         _ => Command::External(
@@ -82,5 +78,5 @@ pub fn parse_command(input: &str) -> Command {
                 args,
             }
         )
-    };
+    }
 }
