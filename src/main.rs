@@ -3,11 +3,12 @@ use std::io::{self, Write};
 pub mod command;
 
 fn main() {
+    let mut input = String::new();
     loop {
         print!("$ ");
         io::stdout().flush().expect("err");
 
-        let mut input = String::new();
+        input.clear();
         io::stdin().read_line(&mut input).expect("err");
         input = input.trim().to_string();
 
