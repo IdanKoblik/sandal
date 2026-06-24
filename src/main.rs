@@ -10,13 +10,13 @@ fn main() {
 
         input.clear();
         io::stdin().read_line(&mut input).expect("err");
-        input = input.trim().to_string();
+        let input = input.trim();
 
         if input.is_empty() {
             continue;
         }
 
-        let cmd = command::parse_command(input.as_str());
+        let cmd = command::parse_command(input);
         if let Err(err) = cmd.execute() {
             println!("sandal: {err}");
         }
