@@ -1,5 +1,6 @@
 use std::io::{self, Write};
-use std::process;
+
+pub mod command;
 
 fn main() {
     loop {
@@ -9,10 +10,14 @@ fn main() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("err");
         input = input.trim().to_string();
-        if input == "exit" {
-            process::exit(1);
+        
+        if input.is_empty() {
+            continue;
         }
 
-        println!("sandal: command not found: {input}");
+        let cmd = command::parse_command(input.as_str());
+        if let Err(err) = cmd.execute() {
+            println!("sandal: {err}");
+        }
     }
 }
