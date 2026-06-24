@@ -1,18 +1,18 @@
-use std::process::{Command as ProcessCommand};
+use std::process::Command as ProcessCommand;
 
 pub enum Command {
     Internal(InternalCommand),
-    External(ExternalCommand)
+    External(ExternalCommand),
 }
 
 pub enum InternalCommand {
     Cd(String),
-    Exit
+    Exit,
 }
 
 pub struct ExternalCommand {
     program: String,
-    args: Vec<String>
+    args: Vec<String>,
 }
 
 impl Command {
@@ -39,7 +39,7 @@ impl InternalCommand {
                 std::process::exit(1);
             }
         };
-        
+
         Ok(())
     }
 }
@@ -60,7 +60,6 @@ impl ExternalCommand {
     }
 }
 
-
 pub fn parse_command(input: &str) -> Command {
     let mut parts = input.split_whitespace();
 
@@ -68,15 +67,13 @@ pub fn parse_command(input: &str) -> Command {
     let args: Vec<String> = parts.map(String::from).collect();
 
     match name {
-        "cd" => {
-            Command::Internal(InternalCommand::Cd(args.first().cloned().unwrap_or_default()))
-        }
+        "cd" => Command::Internal(InternalCommand::Cd(
+            args.first().cloned().unwrap_or_default(),
+        )),
         "exit" => Command::Internal(InternalCommand::Exit),
-        _ => Command::External(
-            ExternalCommand {
-                program: name.to_string(),
-                args,
-            }
-        )
+        _ => Command::External(ExternalCommand {
+            program: name.to_string(),
+            args,
+        }),
     }
 }
