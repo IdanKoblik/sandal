@@ -19,7 +19,7 @@
   { "name": "community/good-first-issue", "color": "8B5CF6", "description": "Good for first-time contributors" },
 
   { "name": "area/linux",      "color": "3B82F6", "description": "Linux-specific changes" },
-  { "name": "area/internal",      "color": "3B82F6", "description": "Internal-system changes" },
+  { "name": "area/internal",      "color": "3575DD", "description": "Internal-system changes" },
   { "name": "area/config",       "color": "6366F1", "description": "Configuration-related" },
   { "name": "area/build",        "color": "4F46E5", "description": "Build system changes" },
   { "name": "area/dependencies", "color": "4338CA", "description": "Dependency updates" },
