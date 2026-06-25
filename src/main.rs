@@ -1,24 +1,30 @@
-use std::io::{self, Write};
-
 pub mod command;
+pub mod completion;
+pub mod editor;
+pub mod home;
 
 fn main() {
-    let mut input = String::new();
+    let completer = completion::Completer::new();
+
     loop {
-        print!("$ ");
-        io::stdout().flush().expect("err");
+        match editor::read_line("$ ", &completer) {
+            Ok(Some(line)) => {
+                let input = line.trim();
+                if input.is_empty() {
+                    continue;
+                }
 
-        input.clear();
-        io::stdin().read_line(&mut input).expect("err");
-        let input = input.trim();
-
-        if input.is_empty() {
-            continue;
-        }
-
-        let cmd = command::parse_command(input);
-        if let Err(err) = cmd.execute() {
-            println!("sandal: {err}");
+                let cmd = command::parse_command(input);
+                if let Err(err) = cmd.execute() {
+                    println!("sandal: {err}");
+                }
+            }
+            // Ctrl-D / end of input.
+            Ok(None) => break,
+            Err(err) => {
+                eprintln!("sandal: {err}");
+                break;
+            }
         }
     }
 }
