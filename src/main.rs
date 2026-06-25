@@ -1,3 +1,5 @@
+use crate::home::expand_tilde;
+
 pub mod command;
 pub mod completion;
 pub mod editor;
@@ -13,8 +15,8 @@ fn main() {
                 if input.is_empty() {
                     continue;
                 }
-
-                let cmd = command::parse_command(input);
+                let expanded = expand_tilde(input);
+                let cmd = command::parse_command(&expanded);
                 if let Err(err) = cmd.execute() {
                     println!("sandal: {err}");
                 }
