@@ -6,3 +6,5 @@ authors = ["Idan Koblik <me@idank.dev>"]
 
 [dependencies]
 dirs = "6.0.0"
+libc = "0.2"
+trie-rs = "0.4"
