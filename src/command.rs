@@ -1,7 +1,5 @@
 use std::process::{Command as ProcessCommand, Stdio};
 
-use crate::home::expand_tilde;
-
 pub enum Command<'a> {
     Internal(InternalCommand<'a>),
     External(ExternalCommand<'a>),
@@ -36,13 +34,7 @@ impl InternalCommand<'_> {
                     let home = dirs::home_dir().expect("Could not determine home directory");
                     std::env::set_current_dir(home)?;
                 } else {
-                    let p = if path.starts_with("~") {
-                        expand_tilde(path)
-                    } else {
-                        path.to_string()
-                    };
-
-                    std::env::set_current_dir(&p)?;
+                    std::env::set_current_dir(path)?;
                 }
             }
             InternalCommand::Exit => {
