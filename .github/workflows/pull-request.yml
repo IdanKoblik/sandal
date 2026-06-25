@@ -1,0 +1,37 @@
+name: Pull Request
+
+on:
+  pull_request:
+
+# Cancel superseded runs on the same PR.
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  artifact:
+    name: Build CI artifact
+    needs: checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: make dist
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandal-pr${{ github.event.pull_request.number }}
+          path: dist/sandal
+          if-no-files-found: error

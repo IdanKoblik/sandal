@@ -1,4 +1,7 @@
-.PHONY: all build run test fmt fmt-check lint check clean
+.PHONY: all build run test fmt fmt-check lint check dist clean
+
+BIN := sandal
+DIST_DIR := dist
 
 all: build
 
@@ -24,6 +27,10 @@ lint:
 	cargo clippy -- -D warnings
 
 check: fmt-check lint test
+
+dist: release
+	mkdir -p $(DIST_DIR)
+	cp target/release/$(BIN) $(DIST_DIR)/$(BIN)
 
 clean:
 	cargo clean
