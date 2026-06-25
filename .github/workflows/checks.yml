@@ -1,0 +1,29 @@
+name: Checks
+
+on:
+  workflow_call:
+
+jobs:
+  checks:
+    name: Test, format & lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Unit tests
+        run: make test
+
+      - name: Format check
+        run: make fmt-check
+
+      - name: Lint
+        run: make lint
