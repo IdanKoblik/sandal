@@ -37,4 +37,8 @@ jobs:
     name: Rust
     needs: changes
     if: needs.changes.outputs.rust == 'true'
+    # Reusable workflows are capped by the caller's permissions; the nested
+    # `build` job needs contents:write to cut a release on manual dispatch.
+    permissions:
+      contents: write
     uses: ./.github/workflows/rust.yml
