@@ -1,14 +1,10 @@
+use crate::internal::InternalCommand;
 use std::process::{Command as ProcessCommand, Stdio};
 
 pub enum Command<'a> {
     Internal(InternalCommand<'a>),
     External(ExternalCommand<'a>),
     Pipeline(Vec<ExternalCommand<'a>>),
-}
-
-pub enum InternalCommand<'a> {
-    Cd(&'a str),
-    Exit,
 }
 
 pub struct ExternalCommand<'a> {
@@ -23,26 +19,6 @@ impl Command<'_> {
             Command::External(cmd) => cmd.execute(),
             Command::Pipeline(cmds) => execute_pipeline(cmds),
         }
-    }
-}
-
-impl InternalCommand<'_> {
-    fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
-        match self {
-            InternalCommand::Cd(path) => {
-                if path.is_empty() {
-                    let home = dirs::home_dir().expect("Could not determine home directory");
-                    std::env::set_current_dir(home)?;
-                } else {
-                    std::env::set_current_dir(path)?;
-                }
-            }
-            InternalCommand::Exit => {
-                std::process::exit(1);
-            }
-        };
-
-        Ok(())
     }
 }
 

@@ -4,6 +4,7 @@ pub mod command;
 pub mod completion;
 pub mod editor;
 pub mod home;
+pub mod internal;
 
 fn main() {
     let completer = completion::Completer::new();
