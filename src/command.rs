@@ -15,7 +15,7 @@ pub enum CommandKind<'a> {
 
 pub struct ExternalCommand<'a> {
     program: &'a str,
-    args: std::str::SplitWhitespace<'a>,
+    args: Vec<&'a str>,
 }
 
 impl Command<'_> {
@@ -87,13 +87,47 @@ fn execute_pipeline(cmds: Vec<ExternalCommand>) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
+fn tokenize(segment: &str) -> Vec<&str> {
+    let bytes = segment.as_bytes();
+    let mut tokens = Vec::new();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if i >= bytes.len() {
+            break;
+        }
+
+        if bytes[i] == b'"' || bytes[i] == b'\'' {
+            let quote = bytes[i];
+            i += 1;
+            let start = i;
+            while i < bytes.len() && bytes[i] != quote {
+                i += 1;
+            }
+            tokens.push(&segment[start..i]);
+            i += 1; // step past the closing quote (or the end)
+        } else {
+            let start = i;
+            while i < bytes.len() && !bytes[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            tokens.push(&segment[start..i]);
+        }
+    }
+
+    tokens
+}
+
 fn parse_external(segment: &str) -> ExternalCommand<'_> {
-    let mut parts = segment.split_whitespace();
-    let program = parts.next().unwrap_or("");
+    let mut tokens = tokenize(segment).into_iter();
+    let program = tokens.next().unwrap_or("");
 
     ExternalCommand {
         program,
-        args: parts,
+        args: tokens.collect(),
     }
 }
 
@@ -106,16 +140,16 @@ pub fn parse_command(input: &str) -> Command<'_> {
         };
     }
 
-    let mut parts = input.split_whitespace();
-    let name = parts.next().unwrap_or("");
+    let mut tokens = tokenize(input).into_iter();
+    let name = tokens.next().unwrap_or("");
 
     let kind = match name {
-        "cd" => CommandKind::Internal(InternalCommand::Cd(parts.next().unwrap_or_default())),
+        "cd" => CommandKind::Internal(InternalCommand::Cd(tokens.next().unwrap_or(""))),
         "exit" => CommandKind::Internal(InternalCommand::Exit),
         "history" => CommandKind::Internal(InternalCommand::History),
         _ => CommandKind::External(ExternalCommand {
             program: name,
-            args: parts,
+            args: tokens.collect(),
         }),
     };
 
@@ -129,19 +163,25 @@ mod tests {
     #[test]
     fn parses_cd_with_argument() {
         let cmd = parse_command("cd /tmp");
-        assert!(matches!(
-            cmd.kind,
-            CommandKind::Internal(InternalCommand::Cd("/tmp"))
-        ));
+        assert!(
+            matches!(cmd.kind, CommandKind::Internal(InternalCommand::Cd(path)) if path == "/tmp")
+        );
+    }
+
+    #[test]
+    fn parses_cd_with_quoted_argument() {
+        let cmd = parse_command("cd \"my dir\"");
+        assert!(
+            matches!(cmd.kind, CommandKind::Internal(InternalCommand::Cd(path)) if path == "my dir")
+        );
     }
 
     #[test]
     fn parses_bare_cd_with_empty_path() {
         let cmd = parse_command("cd");
-        assert!(matches!(
-            cmd.kind,
-            CommandKind::Internal(InternalCommand::Cd(""))
-        ));
+        assert!(
+            matches!(cmd.kind, CommandKind::Internal(InternalCommand::Cd(path)) if path.is_empty())
+        );
     }
 
     #[test]
@@ -162,7 +202,7 @@ mod tests {
         match cmd.kind {
             CommandKind::External(ext) => {
                 assert_eq!(ext.program, "ls");
-                assert_eq!(ext.args.collect::<Vec<_>>(), vec!["-la", "/tmp"]);
+                assert_eq!(ext.args, vec!["-la", "/tmp"]);
             }
             _ => panic!("expected external command"),
         }
