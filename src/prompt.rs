@@ -36,7 +36,7 @@ pub fn render(format: &str) -> String {
 
                 let mut name = String::new();
                 let mut closed = false;
-                while let Some(next) = chars.next() {
+                for next in chars.by_ref() {
                     if next == '}' {
                         closed = true;
                         break;
@@ -78,17 +78,16 @@ pub fn render(format: &str) -> String {
                 let mut body = String::new();
                 let mut depth = 1;
                 let mut closed = false;
-                while let Some(ch) = chars.next() {
-                    match ch {
-                        '(' => depth += 1,
-                        ')' => {
-                            depth -= 1;
-                            if depth == 0 {
-                                closed = true;
-                                break;
-                            }
+
+                for ch in chars.by_ref() {
+                    if ch == '(' {
+                        depth += 1;
+                    } else if ch == ')' {
+                        depth -= 1;
+                        if depth == 0 {
+                            closed = true;
+                            break;
                         }
-                        _ => {}
                     }
                     body.push(ch);
                 }
@@ -108,10 +107,8 @@ pub fn render(format: &str) -> String {
 }
 
 fn username() -> String {
-    if let Ok(user) = std::env::var("USER") {
-        if !user.is_empty() {
-            return user;
-        }
+    if let Ok(user) = std::env::var("USER") && !user.is_empty() {
+        return user;
     }
 
     // Fall back to the passwd database.
