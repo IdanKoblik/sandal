@@ -30,11 +30,11 @@ impl Completer {
         }
     }
 
-    pub fn candidates(&self, word: &str, is_command: bool) -> Vec<String> {
+    pub fn candidates(&self, word: &str, is_command: bool, dirs_only: bool) -> Vec<String> {
         if is_command && !word.contains('/') {
             self.commands.predictive_search(word).collect()
         } else {
-            path_candidates(word)
+            path_candidates(word, dirs_only)
         }
     }
 }
@@ -65,7 +65,7 @@ fn is_executable(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-fn path_candidates(word: &str) -> Vec<String> {
+fn path_candidates(word: &str, dirs_only: bool) -> Vec<String> {
     if word == "~" {
         return vec!["~/".to_string()];
     }
@@ -95,10 +95,15 @@ fn path_candidates(word: &str) -> Vec<String> {
             continue;
         }
 
+        let is_dir = entry.path().is_dir();
+        if dirs_only && !is_dir {
+            continue;
+        }
+
         let mut candidate = String::with_capacity(dir.len() + name.len() + 1);
         candidate.push_str(dir);
         candidate.push_str(&name);
-        if entry.path().is_dir() {
+        if is_dir {
             candidate.push('/');
         }
         out.push(candidate);
@@ -134,7 +139,7 @@ mod tests {
     #[test]
     fn completes_builtins() {
         let completer = Completer::new();
-        let exit = completer.candidates("exi", true);
+        let exit = completer.candidates("exi", true, false);
         assert!(exit.contains(&"exit".to_string()), "got {exit:?}");
     }
 
@@ -159,7 +164,21 @@ mod tests {
     }
 
     fn completer_candidates_for(word: &str) -> Vec<String> {
-        Completer::new().candidates(word, false)
+        Completer::new().candidates(word, false, false)
+    }
+
+    #[test]
+    fn dirs_only_filters_out_files() {
+        // `cd src/` should offer the nested directory but never the .rs files.
+        let got = Completer::new().candidates("src/", false, true);
+        assert!(
+            got.iter().any(|c| c == "src/internal/"),
+            "missing dir: {got:?}"
+        );
+        assert!(
+            got.iter().all(|c| c.ends_with('/')),
+            "leaked a non-dir: {got:?}"
+        );
     }
 
     #[test]

@@ -143,13 +143,17 @@ fn start_completion(
 ) -> io::Result<Option<Menu>> {
     let start = buf.rfind(char::is_whitespace).map(|i| i + 1).unwrap_or(0);
     let word = &buf[start..];
-    let is_command = buf[..start].trim().is_empty();
+    let prefix = buf[..start].trim();
+    let is_command = prefix.is_empty();
 
     if word.is_empty() && is_command {
         return Ok(None);
     }
 
-    let candidates = completer.candidates(word, is_command);
+    // `cd` only ever takes a directory, so don't clutter the menu with files.
+    let dirs_only = prefix.split_whitespace().next() == Some("cd");
+
+    let candidates = completer.candidates(word, is_command, dirs_only);
     match candidates.as_slice() {
         [] => {
             write!(stdout, "\x07")?; // bell
