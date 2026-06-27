@@ -56,17 +56,15 @@ fn rc_path() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(RC_FILE))
 }
 
-pub fn source_rc() {
-    let Some(path) = rc_path() else {
-        return;
-    };
+pub fn source_rc() -> Option<Interpreter> {
+    let path = rc_path()?;
 
     let script = match std::fs::read_to_string(&path) {
         Ok(script) => script,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return None,
         Err(err) => {
             eprintln!("sandal: cannot read {}: {err}", path.display());
-            return;
+            return None;
         }
     };
 
@@ -74,6 +72,8 @@ pub fn source_rc() {
     if let Err(err) = interpreter.execute(&script) {
         eprintln!("sandal: {}: {err}", path.display());
     }
+
+    Some(interpreter)
 }
 
 #[cfg(test)]
