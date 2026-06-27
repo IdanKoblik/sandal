@@ -6,5 +6,6 @@ authors = ["Idan Koblik <me@idank.dev>"]
 
 [dependencies]
 dirs = "6.0.0"
+flash = "0.0.6"
 libc = "0.2"
 trie-rs = "0.4"

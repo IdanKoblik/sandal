@@ -4,23 +4,29 @@ use crate::internal::InternalCommand;
 
 pub mod command;
 pub mod completion;
+pub mod config;
 pub mod editor;
 pub mod home;
 pub mod internal;
+pub mod prompt;
 pub mod state;
 
 fn main() {
+    config::source_rc();
+
     let mut shell_state = state::ShellState::new();
     let completer = completion::Completer::new();
 
+    let format = std::env::var("PS1").unwrap_or_else(|_| prompt::DEFAULT_FORMAT.to_string());
     loop {
-        match editor::read_line("$ ", &completer) {
+        let prompt = prompt::render(&format);
+        match editor::read_line(&prompt, &completer) {
             Ok(Some(line)) => {
                 let input = line.trim();
                 if input.is_empty() {
                     continue;
                 }
-                let expanded = expand_tilde(input);
+                let expanded = expand_tilde(&config::expand_env(input));
                 let cmd = command::parse_command(&expanded);
 
                 if let CommandKind::Internal(InternalCommand::Exit) = cmd.kind {

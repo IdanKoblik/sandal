@@ -16,7 +16,6 @@ fn history_path() -> String {
 
 fn load_history() -> String {
     let path = history_path();
-    println!("path: {path}");
     std::fs::read_to_string(path).unwrap_or_default()
 }
 
