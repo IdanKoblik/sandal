@@ -1,7 +1,13 @@
 use crate::internal::InternalCommand;
+use crate::state::ShellState;
 use std::process::{Command as ProcessCommand, Stdio};
 
-pub enum Command<'a> {
+pub struct Command<'a> {
+    pub cmd: &'a str,
+    pub kind: CommandKind<'a>
+}
+
+pub enum CommandKind<'a> {
     Internal(InternalCommand<'a>),
     External(ExternalCommand<'a>),
     Pipeline(Vec<ExternalCommand<'a>>),
@@ -13,11 +19,14 @@ pub struct ExternalCommand<'a> {
 }
 
 impl Command<'_> {
-    pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
-        match self {
-            Command::Internal(cmd) => cmd.execute(),
-            Command::External(cmd) => cmd.execute(),
-            Command::Pipeline(cmds) => execute_pipeline(cmds),
+    pub fn execute(self, state: &mut ShellState) -> Result<(), Box<dyn std::error::Error>> {
+        state.history.push_str(self.cmd);
+        state.history.push('\n');
+
+        match self.kind {
+            CommandKind::Internal(cmd) => cmd.execute(state),
+            CommandKind::External(cmd) => cmd.execute(),
+            CommandKind::Pipeline(cmds) => execute_pipeline(cmds),
         }
     }
 }
@@ -91,18 +100,27 @@ fn parse_external(segment: &str) -> ExternalCommand<'_> {
 pub fn parse_command(input: &str) -> Command<'_> {
     if input.contains('|') {
         let segments = input.split('|').map(|seg| parse_external(seg.trim()));
-        return Command::Pipeline(segments.collect());
+        return Command {
+            cmd: input,
+            kind: CommandKind::Pipeline(segments.collect()),
+        };
     }
 
     let mut parts = input.split_whitespace();
     let name = parts.next().unwrap_or("");
 
-    match name {
-        "cd" => Command::Internal(InternalCommand::Cd(parts.next().unwrap_or_default())),
-        "exit" => Command::Internal(InternalCommand::Exit),
-        _ => Command::External(ExternalCommand {
+    let kind = match name {
+        "cd" => CommandKind::Internal(InternalCommand::Cd(parts.next().unwrap_or_default())),
+        "exit" => CommandKind::Internal(InternalCommand::Exit),
+        "history" => CommandKind::Internal(InternalCommand::History),
+        _ => CommandKind::External(ExternalCommand {
             program: name,
             args: parts,
         }),
+    };
+
+    Command {
+        cmd: input,
+        kind,
     }
 }

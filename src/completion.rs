@@ -5,7 +5,7 @@ use trie_rs::{Trie, TrieBuilder};
 
 use crate::home::expand_tilde;
 
-const BUILTINS: [&str; 2] = ["cd", "exit"];
+const BUILTINS: [&str; 3] = ["cd", "exit", "history"];
 
 pub struct Completer {
     commands: Trie<u8>,
