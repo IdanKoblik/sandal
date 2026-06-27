@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 const HISTORY_FILE: &str = ".sandal_history";
 
 #[derive(Default)]
 pub struct ShellState {
     pub history: String,
+    pub aliases: HashMap<String, String>,
 }
 
 fn history_path() -> String {
@@ -23,6 +26,7 @@ impl ShellState {
     pub fn new() -> Self {
         Self {
             history: load_history(),
+            aliases: HashMap::new(),
         }
     }
 

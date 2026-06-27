@@ -12,23 +12,30 @@ pub mod prompt;
 pub mod state;
 
 fn main() {
-    config::source_rc();
+    let cfg = config::source_rc();
 
     let mut shell_state = state::ShellState::new();
-    let completer = completion::Completer::new();
+    if let Some(data) = cfg {
+        shell_state.aliases = data.aliases;
+    }
 
+    let completer = completion::Completer::new();
     let format = std::env::var("PS1").unwrap_or_else(|_| prompt::DEFAULT_FORMAT.to_string());
     loop {
         let prompt = prompt::render(&format);
         match editor::read_line(&prompt, &completer) {
             Ok(Some(line)) => {
-                let input = line.trim();
+                let mut input = line.trim();
                 if input.is_empty() {
                     continue;
                 }
+
+                if let Some(alias) = shell_state.aliases.get(input) {
+                    input = alias.trim();
+                }
+
                 let expanded = expand_tilde(&config::expand_env(input));
                 let cmd = command::parse_command(&expanded);
-
                 if let CommandKind::Internal(InternalCommand::Exit) = cmd.kind {
                     break;
                 }
