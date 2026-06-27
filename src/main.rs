@@ -23,7 +23,8 @@ fn main() {
     let format = std::env::var("PS1").unwrap_or_else(|_| prompt::DEFAULT_FORMAT.to_string());
     loop {
         let prompt = prompt::render(&format);
-        match editor::read_line(&prompt, &completer) {
+        let history: Vec<String> = shell_state.history.lines().map(str::to_string).collect();
+        match editor::read_line(&prompt, &completer, &history) {
             Ok(Some(line)) => {
                 let mut input = line.trim();
                 if input.is_empty() {
