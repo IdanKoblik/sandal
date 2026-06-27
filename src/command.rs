@@ -1,7 +1,13 @@
 use crate::internal::InternalCommand;
+use crate::state::ShellState;
 use std::process::{Command as ProcessCommand, Stdio};
 
-pub enum Command<'a> {
+pub struct Command<'a> {
+    pub cmd: &'a str,
+    pub kind: CommandKind<'a>,
+}
+
+pub enum CommandKind<'a> {
     Internal(InternalCommand<'a>),
     External(ExternalCommand<'a>),
     Pipeline(Vec<ExternalCommand<'a>>),
@@ -13,11 +19,14 @@ pub struct ExternalCommand<'a> {
 }
 
 impl Command<'_> {
-    pub fn execute(self) -> Result<(), Box<dyn std::error::Error>> {
-        match self {
-            Command::Internal(cmd) => cmd.execute(),
-            Command::External(cmd) => cmd.execute(),
-            Command::Pipeline(cmds) => execute_pipeline(cmds),
+    pub fn execute(self, state: &mut ShellState) -> Result<(), Box<dyn std::error::Error>> {
+        state.history.push_str(self.cmd);
+        state.history.push('\n');
+
+        match self.kind {
+            CommandKind::Internal(cmd) => cmd.execute(state),
+            CommandKind::External(cmd) => cmd.execute(),
+            CommandKind::Pipeline(cmds) => execute_pipeline(cmds),
         }
     }
 }
@@ -91,18 +100,96 @@ fn parse_external(segment: &str) -> ExternalCommand<'_> {
 pub fn parse_command(input: &str) -> Command<'_> {
     if input.contains('|') {
         let segments = input.split('|').map(|seg| parse_external(seg.trim()));
-        return Command::Pipeline(segments.collect());
+        return Command {
+            cmd: input,
+            kind: CommandKind::Pipeline(segments.collect()),
+        };
     }
 
     let mut parts = input.split_whitespace();
     let name = parts.next().unwrap_or("");
 
-    match name {
-        "cd" => Command::Internal(InternalCommand::Cd(parts.next().unwrap_or_default())),
-        "exit" => Command::Internal(InternalCommand::Exit),
-        _ => Command::External(ExternalCommand {
+    let kind = match name {
+        "cd" => CommandKind::Internal(InternalCommand::Cd(parts.next().unwrap_or_default())),
+        "exit" => CommandKind::Internal(InternalCommand::Exit),
+        "history" => CommandKind::Internal(InternalCommand::History),
+        _ => CommandKind::External(ExternalCommand {
             program: name,
             args: parts,
         }),
+    };
+
+    Command { cmd: input, kind }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_cd_with_argument() {
+        let cmd = parse_command("cd /tmp");
+        assert!(matches!(
+            cmd.kind,
+            CommandKind::Internal(InternalCommand::Cd("/tmp"))
+        ));
+    }
+
+    #[test]
+    fn parses_bare_cd_with_empty_path() {
+        let cmd = parse_command("cd");
+        assert!(matches!(
+            cmd.kind,
+            CommandKind::Internal(InternalCommand::Cd(""))
+        ));
+    }
+
+    #[test]
+    fn parses_builtins() {
+        assert!(matches!(
+            parse_command("exit").kind,
+            CommandKind::Internal(InternalCommand::Exit)
+        ));
+        assert!(matches!(
+            parse_command("history").kind,
+            CommandKind::Internal(InternalCommand::History)
+        ));
+    }
+
+    #[test]
+    fn parses_external_command_with_args() {
+        let cmd = parse_command("ls -la /tmp");
+        match cmd.kind {
+            CommandKind::External(ext) => {
+                assert_eq!(ext.program, "ls");
+                assert_eq!(ext.args.collect::<Vec<_>>(), vec!["-la", "/tmp"]);
+            }
+            _ => panic!("expected external command"),
+        }
+    }
+
+    #[test]
+    fn empty_input_is_external_with_empty_program() {
+        match parse_command("").kind {
+            CommandKind::External(ext) => assert_eq!(ext.program, ""),
+            _ => panic!("expected external command"),
+        }
+    }
+
+    #[test]
+    fn parses_pipeline_segments_and_trims_whitespace() {
+        let cmd = parse_command("ls -la | grep foo | wc -l");
+        match cmd.kind {
+            CommandKind::Pipeline(segments) => {
+                let programs: Vec<_> = segments.iter().map(|s| s.program).collect();
+                assert_eq!(programs, vec!["ls", "grep", "wc"]);
+            }
+            _ => panic!("expected pipeline"),
+        }
+    }
+
+    #[test]
+    fn command_retains_original_input() {
+        assert_eq!(parse_command("cd /tmp").cmd, "cd /tmp");
     }
 }
