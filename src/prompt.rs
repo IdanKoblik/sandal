@@ -107,7 +107,9 @@ pub fn render(format: &str) -> String {
 }
 
 fn username() -> String {
-    if let Ok(user) = std::env::var("USER") && !user.is_empty() {
+    if let Ok(user) = std::env::var("USER")
+        && !user.is_empty()
+    {
         return user;
     }
 
