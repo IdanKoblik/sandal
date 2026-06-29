@@ -53,6 +53,8 @@ impl Command<'_> {
 
         let before = state.player.level.level;
         state.player.level.add_xp(earned);
+        println!("\nearned +{earned} XP.");
+
         if state.player.level.level > before {
             println!(
                 "✨ {} reached level {}!",
