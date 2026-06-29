@@ -6,6 +6,7 @@ pub mod command;
 pub mod completion;
 pub mod config;
 pub mod editor;
+pub mod game_engine;
 pub mod home;
 pub mod internal;
 pub mod prompt;
@@ -14,7 +15,9 @@ pub mod state;
 fn main() {
     let cfg = config::source_rc();
 
-    let mut shell_state = state::ShellState::new();
+    let player = game_engine::user::login();
+
+    let mut shell_state = state::ShellState::new(player);
     if let Some(data) = cfg {
         shell_state.aliases = data.aliases;
     }
@@ -22,7 +25,11 @@ fn main() {
     let completer = completion::Completer::new();
     let format = std::env::var("PS1").unwrap_or_else(|_| prompt::DEFAULT_FORMAT.to_string());
     loop {
-        let prompt = prompt::render(&format);
+        let ctx = prompt::PromptContext {
+            class: shell_state.player.class.name().to_string(),
+            level: shell_state.player.level.level,
+        };
+        let prompt = prompt::render(&format, &ctx);
         let history: Vec<String> = shell_state.history.lines().map(str::to_string).collect();
         match editor::read_line(&prompt, &completer, &history) {
             Ok(Some(line)) => {
