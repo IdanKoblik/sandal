@@ -47,8 +47,10 @@ impl Command<'_> {
                 (result, earned, attrs)
             }
             CommandKind::Pipeline(cmds) => {
-                let stages: Vec<(&str, &[&str])> =
-                    cmds.iter().map(|c| (c.program, c.args.as_slice())).collect();
+                let stages: Vec<(&str, &[&str])> = cmds
+                    .iter()
+                    .map(|c| (c.program, c.args.as_slice()))
+                    .collect();
                 let full = xp.pipeline_xp(&stages);
                 let success_attrs = xp.pipeline_attributes(&stages);
                 let result = execute_pipeline(cmds);

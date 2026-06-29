@@ -29,9 +29,11 @@ impl UserStore {
         let Some(path) = store_path() else {
             return;
         };
-        if let Some(dir) = path.parent() && let Err(err) = std::fs::create_dir_all(dir) {
-                eprintln!("sandal: could not create {}: {err}", dir.display());
-                return;
+        if let Some(dir) = path.parent()
+            && let Err(err) = std::fs::create_dir_all(dir)
+        {
+            eprintln!("sandal: could not create {}: {err}", dir.display());
+            return;
         }
 
         match serde_json::to_string_pretty(self) {
@@ -50,7 +52,10 @@ pub fn login() -> GamePlayer {
     let id = current_identity();
 
     if let Some(player) = store.users.remove(&id) {
-        println!("Welcome back, {} (level {}).", player.name, player.level.level);
+        println!(
+            "Welcome back, {} (level {}).",
+            player.name, player.level.level
+        );
         return player;
     }
 

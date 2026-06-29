@@ -207,7 +207,10 @@ mod tests {
     #[test]
     fn class_is_chosen_by_number_or_name() {
         assert_eq!(PlayerClass::from_choice("1"), Some(PlayerClass::Warrior));
-        assert_eq!(PlayerClass::from_choice("  rogue "), Some(PlayerClass::Rogue));
+        assert_eq!(
+            PlayerClass::from_choice("  rogue "),
+            Some(PlayerClass::Rogue)
+        );
         assert_eq!(PlayerClass::from_choice("BARD"), Some(PlayerClass::Bard));
         assert_eq!(PlayerClass::from_choice("wizard"), None);
     }

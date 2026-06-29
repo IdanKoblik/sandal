@@ -64,7 +64,12 @@ impl Experience {
             .sum()
     }
 
-    pub fn attributes(&self, program: &str, _args: &[&str], success: bool) -> Vec<(Attribute, u32)> {
+    pub fn attributes(
+        &self,
+        program: &str,
+        _args: &[&str],
+        success: bool,
+    ) -> Vec<(Attribute, u32)> {
         if program.is_empty() {
             return Vec::new();
         }
@@ -130,7 +135,10 @@ mod tests {
         // "git" -> 1 + 3/3 = 2; positional "commit" -> +1
         assert_eq!(xp.command_xp("git", &["commit"]), 3);
         // flag "-m" worth 2, positional "msg" worth 1
-        assert_eq!(xp.command_xp("git", &["commit", "-m", "msg"]), 2 + 1 + 2 + 1);
+        assert_eq!(
+            xp.command_xp("git", &["commit", "-m", "msg"]),
+            2 + 1 + 2 + 1
+        );
         // a lone "-" is a positional (stdin), not a flag
         assert_eq!(xp.command_xp("cat", &["-"]), 3);
     }
@@ -155,23 +163,44 @@ mod tests {
     fn failures_grant_the_learning_reward() {
         let xp = Experience::default();
         assert_eq!(xp.award("gcc", &["main.c"], false), xp.learning);
-        assert_eq!(xp.award("gcc", &["main.c"], true), xp.command_xp("gcc", &["main.c"]));
+        assert_eq!(
+            xp.award("gcc", &["main.c"], true),
+            xp.command_xp("gcc", &["main.c"])
+        );
     }
 
     #[test]
     fn commands_train_their_themed_attribute() {
         let xp = Experience::default();
-        assert_eq!(xp.attributes("rm", &["-rf", "x"], true), vec![(Attribute::Strength, 1)]);
-        assert_eq!(xp.attributes("cargo", &["build"], true), vec![(Attribute::Intelligence, 1)]);
-        assert_eq!(xp.attributes("ls", &[], true), vec![(Attribute::Agility, 1)]);
-        assert_eq!(xp.attributes("grep", &["foo"], true), vec![(Attribute::Wisdom, 1)]);
-        assert_eq!(xp.attributes("git", &["push"], true), vec![(Attribute::Collaboration, 1)]);
+        assert_eq!(
+            xp.attributes("rm", &["-rf", "x"], true),
+            vec![(Attribute::Strength, 1)]
+        );
+        assert_eq!(
+            xp.attributes("cargo", &["build"], true),
+            vec![(Attribute::Intelligence, 1)]
+        );
+        assert_eq!(
+            xp.attributes("ls", &[], true),
+            vec![(Attribute::Agility, 1)]
+        );
+        assert_eq!(
+            xp.attributes("grep", &["foo"], true),
+            vec![(Attribute::Wisdom, 1)]
+        );
+        assert_eq!(
+            xp.attributes("git", &["push"], true),
+            vec![(Attribute::Collaboration, 1)]
+        );
     }
 
     #[test]
     fn failures_only_train_wisdom() {
         let xp = Experience::default();
-        assert_eq!(xp.attributes("cargo", &["build"], false), vec![(Attribute::Wisdom, 1)]);
+        assert_eq!(
+            xp.attributes("cargo", &["build"], false),
+            vec![(Attribute::Wisdom, 1)]
+        );
     }
 
     #[test]
