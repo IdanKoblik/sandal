@@ -1,3 +1,5 @@
+use crate::game_engine::player::Attribute;
+
 pub struct Experience {
     /// Flat reward for running any non-empty command.
     pub base: u32,
@@ -62,6 +64,39 @@ impl Experience {
             .sum()
     }
 
+    pub fn attributes(&self, program: &str, _args: &[&str], success: bool) -> Vec<(Attribute, u32)> {
+        if program.is_empty() {
+            return Vec::new();
+        }
+        if !success {
+            return vec![(Attribute::Wisdom, 1)];
+        }
+
+        match program {
+            "rm" | "mv" | "dd" | "kill" | "chmod" | "chown" | "sudo" | "mount" => {
+                vec![(Attribute::Strength, 1)]
+            }
+            "cargo" | "rustc" | "gcc" | "cc" | "make" | "python" | "python3" | "node" => {
+                vec![(Attribute::Intelligence, 1)]
+            }
+            "git" | "ssh" | "scp" | "curl" | "wget" | "gh" | "rsync" => {
+                vec![(Attribute::Collaboration, 1)]
+            }
+            "man" | "grep" | "find" | "cat" | "less" | "more" | "head" | "tail" => {
+                vec![(Attribute::Wisdom, 1)]
+            }
+            "cd" | "ls" | "pushd" | "popd" => vec![(Attribute::Agility, 1)],
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn pipeline_attributes(&self, stages: &[(&str, &[&str])]) -> Vec<(Attribute, u32)> {
+        stages
+            .iter()
+            .flat_map(|(program, args)| self.attributes(program, args, true))
+            .collect()
+    }
+
     fn arg_value(&self, arg: &str) -> u32 {
         if arg.len() > 1 && arg.starts_with('-') {
             self.per_flag
@@ -121,6 +156,43 @@ mod tests {
         let xp = Experience::default();
         assert_eq!(xp.award("gcc", &["main.c"], false), xp.learning);
         assert_eq!(xp.award("gcc", &["main.c"], true), xp.command_xp("gcc", &["main.c"]));
+    }
+
+    #[test]
+    fn commands_train_their_themed_attribute() {
+        let xp = Experience::default();
+        assert_eq!(xp.attributes("rm", &["-rf", "x"], true), vec![(Attribute::Strength, 1)]);
+        assert_eq!(xp.attributes("cargo", &["build"], true), vec![(Attribute::Intelligence, 1)]);
+        assert_eq!(xp.attributes("ls", &[], true), vec![(Attribute::Agility, 1)]);
+        assert_eq!(xp.attributes("grep", &["foo"], true), vec![(Attribute::Wisdom, 1)]);
+        assert_eq!(xp.attributes("git", &["push"], true), vec![(Attribute::Collaboration, 1)]);
+    }
+
+    #[test]
+    fn failures_only_train_wisdom() {
+        let xp = Experience::default();
+        assert_eq!(xp.attributes("cargo", &["build"], false), vec![(Attribute::Wisdom, 1)]);
+    }
+
+    #[test]
+    fn unknown_and_empty_programs_train_nothing() {
+        let xp = Experience::default();
+        assert!(xp.attributes("frobnicate", &[], true).is_empty());
+        assert!(xp.attributes("", &["x"], true).is_empty());
+    }
+
+    #[test]
+    fn pipeline_attributes_accumulate_per_stage() {
+        let xp = Experience::default();
+        let stages: &[(&str, &[&str])] = &[("ls", &["-la"]), ("grep", &["foo"]), ("git", &["log"])];
+        assert_eq!(
+            xp.pipeline_attributes(stages),
+            vec![
+                (Attribute::Agility, 1),
+                (Attribute::Wisdom, 1),
+                (Attribute::Collaboration, 1),
+            ]
+        );
     }
 
     #[test]

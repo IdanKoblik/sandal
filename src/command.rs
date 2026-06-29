@@ -1,4 +1,5 @@
 use crate::game_engine::experience::Experience;
+use crate::game_engine::player::Attribute;
 use crate::internal::InternalCommand;
 use crate::state::ShellState;
 use std::process::{Command as ProcessCommand, Stdio};
@@ -25,35 +26,51 @@ impl Command<'_> {
         state.history.push('\n');
 
         let xp = Experience::default();
-        let (result, earned) = match self.kind {
+        let (result, earned, attrs) = match self.kind {
             CommandKind::Internal(cmd) => {
                 let mut tokens = self.cmd.split_whitespace();
                 let program = tokens.next().unwrap_or("");
                 let args: Vec<&str> = tokens.collect();
                 let result = cmd.execute(state);
-                let earned = xp.award(program, &args, result.is_ok());
-                (result, earned)
+                let ok = result.is_ok();
+                let earned = xp.award(program, &args, ok);
+                let attrs = xp.attributes(program, &args, ok);
+                (result, earned, attrs)
             }
             CommandKind::External(cmd) => {
                 let program = cmd.program;
                 let args = cmd.args.clone();
                 let result = cmd.execute();
-                let earned = xp.award(program, &args, result.is_ok());
-                (result, earned)
+                let ok = result.is_ok();
+                let earned = xp.award(program, &args, ok);
+                let attrs = xp.attributes(program, &args, ok);
+                (result, earned, attrs)
             }
             CommandKind::Pipeline(cmds) => {
                 let stages: Vec<(&str, &[&str])> =
                     cmds.iter().map(|c| (c.program, c.args.as_slice())).collect();
                 let full = xp.pipeline_xp(&stages);
+                let success_attrs = xp.pipeline_attributes(&stages);
                 let result = execute_pipeline(cmds);
-                let earned = if result.is_ok() { full } else { xp.learning };
-                (result, earned)
+                let ok = result.is_ok();
+                let earned = if ok { full } else { xp.learning };
+                let attrs = if ok {
+                    success_attrs
+                } else {
+                    vec![(Attribute::Wisdom, 1)]
+                };
+                (result, earned, attrs)
             }
         };
 
         let before = state.player.level.level;
         state.player.level.add_xp(earned);
         println!("\nearned +{earned} XP.");
+
+        for (attr, by) in &attrs {
+            state.player.attr.increment(*attr, *by);
+            println!("  +{by} {}", attr.name());
+        }
 
         if state.player.level.level > before {
             println!(
