@@ -6,6 +6,7 @@ pub mod command;
 pub mod completion;
 pub mod config;
 pub mod editor;
+pub mod game_engine;
 pub mod home;
 pub mod internal;
 pub mod prompt;
@@ -14,7 +15,9 @@ pub mod state;
 fn main() {
     let cfg = config::source_rc();
 
-    let mut shell_state = state::ShellState::new();
+    let player = game_engine::user::login();
+
+    let mut shell_state = state::ShellState::new(player);
     if let Some(data) = cfg {
         shell_state.aliases = data.aliases;
     }
