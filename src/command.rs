@@ -63,13 +63,17 @@ impl Command<'_> {
             }
         };
 
+        let class = state.player.class;
+        let earned = earned + class.xp_bonus(earned, &attrs);
+
         let before = state.player.level.level;
         state.player.level.add_xp(earned);
         println!("\nearned +{earned} XP.");
 
         for (attr, by) in &attrs {
-            state.player.attr.increment(*attr, *by);
-            println!("  +{by} {}", attr.name());
+            let gain = by + class.affinity_bonus(*attr);
+            state.player.attr.increment(*attr, gain);
+            println!("  +{gain} {}", attr.name());
         }
 
         if state.player.level.level > before {

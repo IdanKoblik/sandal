@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::game_engine::player::GamePlayer;
+use crate::game_engine::player::{GamePlayer, PlayerClass};
 
 const STORE_DIR: &str = ".sandal";
 const STORE_FILE: &str = "users.json";
@@ -55,10 +55,13 @@ pub fn login() -> GamePlayer {
     }
 
     let name = prompt_name(&id);
-    let player = GamePlayer::new(name);
+    let class = prompt_class();
+    let player = GamePlayer::new(name, class);
     println!(
-        "Welcome, {}! Your adventure begins at level {}.",
-        player.name, player.level.level
+        "Welcome, {} the {}! Your adventure begins at level {}.",
+        player.name,
+        class.name(),
+        player.level.level
     );
     player
 }
@@ -95,4 +98,26 @@ fn prompt_name(default: &str) -> String {
     } else {
         name.to_string()
     }
+}
+
+fn prompt_class() -> PlayerClass {
+    println!("Choose your class:");
+    for (i, class) in PlayerClass::ALL.iter().enumerate() {
+        println!(
+            "  {}. {:<8} — masters {}, hones {} (+25% XP for {})",
+            i + 1,
+            class.name(),
+            class.primary().name(),
+            class.secondary().name(),
+            class.tagline()
+        );
+    }
+    print!("Class [1-4, default Warrior]: ");
+    let _ = io::stdout().flush();
+
+    let mut line = String::new();
+    if io::stdin().read_line(&mut line).is_err() {
+        return PlayerClass::Warrior;
+    }
+    PlayerClass::from_choice(&line).unwrap_or(PlayerClass::Warrior)
 }

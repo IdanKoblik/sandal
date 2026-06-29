@@ -1,7 +1,13 @@
 use std::ffi::CStr;
 use std::process::Command;
 
-pub const DEFAULT_FORMAT: &str = "[{user}@{host} {cwd}]{prompt} ";
+pub const DEFAULT_FORMAT: &str = "[{user}@{host} {cwd}] {class} lvl{level}{prompt} ";
+
+#[derive(Default)]
+pub struct PromptContext {
+    pub class: String,
+    pub level: u8,
+}
 
 /// Render a prompt format string into the text shown to the user.
 ///
@@ -11,6 +17,8 @@ pub const DEFAULT_FORMAT: &str = "[{user}@{host} {cwd}]{prompt} ";
 ///   `{cwd}`    - working directory, home collapsed to `~`
 ///   `{dir}`    - basename of the working directory (like zsh `%c`)
 ///   `{prompt}` - `#` when root, otherwise `$`
+///   `{class}`  - the player's class name
+///   `{level}`  - the player's current level
 ///
 /// `$(command)` is substituted with the command's output on every redraw, just
 /// like in bash/zsh — so a git branch segment is written the usual way.
@@ -20,7 +28,7 @@ pub const DEFAULT_FORMAT: &str = "[{user}@{host} {cwd}]{prompt} ";
 ///
 /// A literal brace is written `{{` or `}}`. An unknown token such as `{foo}`
 /// is left verbatim so the mistake is visible rather than silently dropped.
-pub fn render(format: &str) -> String {
+pub fn render(format: &str, ctx: &PromptContext) -> String {
     let mut out = String::with_capacity(format.len());
     let mut chars = format.chars().peekable();
 
@@ -56,6 +64,8 @@ pub fn render(format: &str) -> String {
                     "cwd" => out.push_str(&cwd()),
                     "dir" => out.push_str(&dir()),
                     "prompt" => out.push_str(prompt_char()),
+                    "class" => out.push_str(&ctx.class),
+                    "level" => out.push_str(&ctx.level.to_string()),
                     _ => match style_code(&name) {
                         Some(code) => out.push_str(code),
                         None => {
@@ -203,12 +213,26 @@ fn prompt_char() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::render;
+    use super::PromptContext;
+
+    /// Render with an empty context — for tests that don't exercise player tokens.
+    fn render(format: &str) -> String {
+        super::render(format, &PromptContext::default())
+    }
 
     #[test]
     fn plain_text_is_unchanged() {
         assert_eq!(render("$ "), "$ ");
         assert_eq!(render(""), "");
+    }
+
+    #[test]
+    fn class_and_level_tokens_reflect_the_player() {
+        let ctx = PromptContext {
+            class: "Mage".to_string(),
+            level: 7,
+        };
+        assert_eq!(super::render("{class} lvl{level}", &ctx), "Mage lvl7");
     }
 
     #[test]

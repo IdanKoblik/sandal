@@ -25,7 +25,11 @@ fn main() {
     let completer = completion::Completer::new();
     let format = std::env::var("PS1").unwrap_or_else(|_| prompt::DEFAULT_FORMAT.to_string());
     loop {
-        let prompt = prompt::render(&format);
+        let ctx = prompt::PromptContext {
+            class: shell_state.player.class.name().to_string(),
+            level: shell_state.player.level.level,
+        };
+        let prompt = prompt::render(&format, &ctx);
         let history: Vec<String> = shell_state.history.lines().map(str::to_string).collect();
         match editor::read_line(&prompt, &completer, &history) {
             Ok(Some(line)) => {
